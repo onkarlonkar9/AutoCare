@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum AppRole {
+  admin
+  owner
+  service_center
+}
+
+enum VehicleType {
+  bike
+  car
+  truck
+  bus
+  scooter
+  machinery
+}
+
+enum FuelType {
+  petrol
+  diesel
+  electric
+  hybrid
+  cng
+  lpg
+}
+
+enum ServiceType {
+  oil_change
+  brake_pad
+  wheel_alignment
+  wheel_balancing
+  tire_replacement
+  battery_replacement
+  general_service
+  engine_repair
+  custom
+}
+
+enum JobStatus {
+  pending
+  in_progress
+  waiting_parts
+  completed
+  delivered
+}
+
+enum MechanicStatus {
+  available
+  busy
+  off_duty
+}
+
+model User {
+  id               String               @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  email            String               @unique
+  phone            String?
+  avatarUrl        String?
+  passwordHash     String
+  role             AppRole
+  planName         String               @default("free_trial")
+  subscription     String               @default("active")
+  trialEndsAt      DateTime?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  vehicles            Vehicle[]
+  serviceRecords      ServiceRecord[]
+  mechanics           Mechanic[]
+  customers           Customer[]
+  jobCards            JobCard[]
+  serviceCenterConfig ServiceCenterConfig?
+}
+
+model ServiceCenterConfig {
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  centerId               String   @unique @db.ObjectId
+  featureToggles         Json?
+  extensionPacks         Json?
+  dashboardThemeConfig   Json?
+  branches               Json?
+  machineConfig          Json?
+  reportConfig           Json?
+  workshopSettings       Json?
+  shiftSettings          Json?
+  auditConfig            Json?
+  subscriptionStatus     Json?
+  mechanicShiftProfiles  Json?
+  recentCustomerProfiles Json?
+  dashboardLayout        Json?
+  serviceBays            Json?
+  jobQueue               Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  center User @relation(fields: [centerId], references: [id])
+}
+
+model Vehicle {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  ownerId         String      @db.ObjectId
+  name            String
+  vehicleNumber   String
+  type            VehicleType @default(car)
+  manufacturer    String      @default("")
+  model           String      @default("")
+  year            Int         @default(2024)
+  fuelType        FuelType    @default(petrol)
+  engineNumber    String      @default("")
+  chassisNumber   String      @default("")
+  currentMileage  Int         @default(0)
+  purchaseDate    DateTime?
+  imageUrl        String?
+  healthScore     Int         @default(100)
+  nextServiceDate DateTime?
+  insuranceExpiry DateTime?
+  pucExpiry       DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  owner          User            @relation(fields: [ownerId], references: [id])
+  serviceRecords ServiceRecord[]
+
+  @@index([ownerId])
+}
+
+model ServiceRecord {
+  id                String      @id @default(auto()) @map("_id") @db.ObjectId
+  vehicleId         String      @db.ObjectId
+  ownerId           String      @db.ObjectId
+  serviceType       ServiceType
+  date              DateTime    @default(now())
+  mileageAtService  Int         @default(0)
+  serviceCenterName String      @default("")
+  mechanicName      String      @default("")
+  partsReplaced     String[]
+  cost              Float       @default(0)
+  notes             String      @default("")
+  billUrl           String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  owner   User    @relation(fields: [ownerId], references: [id])
+
+  @@index([vehicleId])
+  @@index([ownerId])
+}
+
+model Mechanic {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  centerId       String         @db.ObjectId
+  name           String
+  phone          String         @default("")
+  specialization String         @default("")
+  status         MechanicStatus @default(available)
+  activeJobs     Int            @default(0)
+  completedJobs  Int            @default(0)
+  rating         Float          @default(0)
+  joinedAt       DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  center       User      @relation(fields: [centerId], references: [id])
+  assignedJobs JobCard[]
+
+  @@index([centerId])
+}
+
+model Customer {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  centerId       String   @db.ObjectId
+  name           String
+  phone          String   @default("")
+  email          String?
+  vehicleNumbers String[]
+  totalVisits    Int      @default(0)
+  totalSpend     Float    @default(0)
+  lastVisit      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  center User @relation(fields: [centerId], references: [id])
+
+  @@index([centerId])
+}
+
+model JobCard {
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  centerId           String    @db.ObjectId
+  customerName       String
+  customerPhone      String    @default("")
+  vehicleNumber      String
+  vehicleModel       String    @default("")
+  mileage            Int       @default(0)
+  problemDescription String    @default("")
+  serviceTasks       String[]
+  partsRequired      String[]
+  estimatedCost      Float     @default(0)
+  actualCost         Float?
+  mechanicId         String?   @db.ObjectId
+  mechanicName       String    @default("")
+  status             JobStatus @default(pending)
+  notes              String    @default("")
+  completedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  center   User      @relation(fields: [centerId], references: [id])
+  mechanic Mechanic? @relation(fields: [mechanicId], references: [id])
+
+  @@index([centerId])
+  @@index([status])
+}

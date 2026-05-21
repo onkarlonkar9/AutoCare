@@ -1,0 +1,17 @@
+{
+  "name": "autocare-ai",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "install:frontend": "npm --prefix frontend install",
+    "install:backend": "npm --prefix backend install",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "test:frontend": "npm --prefix frontend run test",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "backend:prisma:generate": "npm --prefix backend run prisma:generate",
+    "backend:prisma:migrate": "npm --prefix backend run prisma:migrate"
+  }
+}
