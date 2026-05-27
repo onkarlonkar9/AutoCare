@@ -7,7 +7,7 @@ import { requireAuth, requireRole, type AuthenticatedRequest } from "../middlewa
 const router = Router();
 
 function asJsonPatch(data: Record<string, unknown>) {
-  const out: Record<string, Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined> = {};
+  const out: Record<string, Prisma.InputJsonValue | Prisma.NullTypes.JsonNull | undefined> = {};
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined) continue;
     out[key] = value === null ? Prisma.JsonNull : (value as Prisma.InputJsonValue);

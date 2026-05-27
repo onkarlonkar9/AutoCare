@@ -9,7 +9,12 @@
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "prisma:migrate": "prisma db push"
+    "prisma:migrate": "prisma db push",
+    "db:init": "npm run prisma:push",
+    "db:seed": "npx tsx prisma/seed.ts",
+    "db:setup": "npm run db:init && npm run db:seed",
+    "db:clear": "npx tsx prisma/clear.ts",
+    "db:reset": "npm run db:clear && npm run db:setup"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

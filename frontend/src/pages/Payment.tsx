@@ -46,6 +46,7 @@ const Payment = () => {
   const { user, subscription, role } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState<PlanId | null>(null);
+  const isAdmin = role === 'admin';
 
   useEffect(() => {
     const script = document.createElement('script');
@@ -70,6 +71,11 @@ const Payment = () => {
   };
 
   const handleSubscription = async (plan: PlanId) => {
+    if (isAdmin) {
+      toast.success('Admin users already have full access to all features. No payment is required.');
+      return;
+    }
+
     if (plan === 'enterprise') {
       navigate('/contact');
       return;
@@ -160,6 +166,12 @@ const Payment = () => {
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Unlock the full potential of your workshop with AutoCare AI&apos;s premium features.
           </p>
+          {isAdmin && (
+            <div className="mt-6 rounded-3xl border border-primary/20 bg-primary/5 p-6 text-left text-sm text-foreground/90">
+              <p className="font-semibold mb-1">Super Admin access enabled</p>
+              <p>As an admin user, you already have full access across all plans and features without making a payment.</p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

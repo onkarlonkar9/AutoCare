@@ -7,30 +7,37 @@ import { AnimatedBrandLogo } from '@/components/shared/AnimatedBrandLogo';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
 export function StickyNav() {
-  const [visible, setVisible] = useState(false);
-  const [lastY, setLastY] = useState(0);
+  const [hasScrolled, setHasScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    let frame: number | null = null;
     const onScroll = () => {
-      const y = window.scrollY;
-      // Show after scrolling 200px past hero
-      setVisible(y > 200 && y < lastY || y > 500);
-      setLastY(y);
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        setHasScrolled(window.scrollY > 120);
+        frame = null;
+      });
     };
+
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [lastY]);
+    onScroll();
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   return (
     <AnimatePresence>
-      {visible && (
+      {hasScrolled && (
         <motion.header
-          initial={{ y: -80, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -80, opacity: 0 }}
-          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed top-0 inset-x-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed top-0 inset-x-0 z-50 border-b border-border/60 bg-background/95 backdrop-blur-xl shadow-sm shadow-slate-900/5"
         >
           <div className="max-w-[1250px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
             {/* Logo */}

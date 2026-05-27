@@ -356,7 +356,7 @@ export default function ServiceCenterLayout() {
 
       <div className="flex flex-1 min-h-0">
         {/* ===== LEFT ICON RAIL ===== */}
-        <aside className="hidden lg:flex w-14 flex-col items-center py-3 gap-1 border-r border-border/40 bg-card/30 flex-shrink-0">
+        <aside className="hidden lg:flex w-16 flex-col items-center py-4 gap-2 border-r border-border/40 bg-card/40 backdrop-blur-sm sticky top-12 self-start max-h-[calc(100vh-3rem)] overflow-y-auto flex-shrink-0">
           {/* Sidebar Branch Switcher */}
           {extensionPacks.multiBranchManagement && branches.length > 0 && (
             <div className="mb-2 pb-2 border-b border-border/40 w-full flex justify-center">
