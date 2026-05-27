@@ -13,5 +13,8 @@
     "lint:frontend": "npm --prefix frontend run lint",
     "backend:prisma:generate": "npm --prefix backend run prisma:generate",
     "backend:prisma:migrate": "npm --prefix backend run prisma:migrate"
+  },
+  "dependencies": {
+    "mongodb": "^7.2.0"
   }
 }

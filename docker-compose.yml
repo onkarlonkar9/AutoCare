@@ -1,0 +1,35 @@
+version: "3.9"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      - PORT=4000
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:8080}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:8080}
+      - AI_GATEWAY_URL=${AI_GATEWAY_URL}
+      - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
+      - AI_GATEWAY_MODEL=${AI_GATEWAY_MODEL:-google/gemini-3-flash-preview}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:4000/api/auth/google/callback}
+    volumes:
+      - ./backend/uploads:/app/backend/uploads
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api}
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend

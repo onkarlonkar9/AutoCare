@@ -43,6 +43,7 @@ import SCSettings from "./pages/service-center/Settings";
 import SCExtensions from "./pages/service-center/Extensions";
 import Supplies from "./pages/service-center/Supplies";
 import WheelAlignment from "./pages/service-center/WheelAlignment";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -102,7 +103,7 @@ const App = () => (
                 </Route>
               </Route>
 
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
             <AIAssistant />
             <JobCardCalculator />
