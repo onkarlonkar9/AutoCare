@@ -1,0 +1,11 @@
+vpc_id = "vpc-xxxxxxxx"
+
+public_subnet_ids = [
+  "subnet-xxxxxxxx",
+  "subnet-yyyyyyyy",
+]
+
+# Optional: allow SSH from your public IP only.
+# key_name          = "your-ec2-key-pair"
+# ssh_allowed_cidrs = ["203.0.113.10/32"]
+

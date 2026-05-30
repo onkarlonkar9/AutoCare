@@ -52,6 +52,13 @@ The Compose setup uses non-root containers, health checks, read-only root
 filesystems, dropped Linux capabilities, restart policies, deterministic npm
 installs, and a persistent uploads volume.
 
+## AWS Load Balancing And Autoscaling
+
+The [`terraform`](terraform/README.md) directory contains an AWS Application
+Load Balancer and Auto Scaling Group deployment. It starts with two instances,
+scales between two and four based on CPU usage, and reads runtime secrets from
+AWS Systems Manager Parameter Store.
+
 ## Local Development
 
 ```sh

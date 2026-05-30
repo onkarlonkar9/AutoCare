@@ -18,6 +18,10 @@ backend/uploads/
 frontend/playwright-report/
 frontend/test-results/
 test-results/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
 
 # Editor directories and files
 .vscode/*
