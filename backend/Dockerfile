@@ -1,28 +1,27 @@
 # syntax=docker/dockerfile:1
-FROM node:20-bullseye-slim AS deps
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
+
 COPY package.json package-lock.json ./
-COPY backend/package.json backend/
-WORKDIR /app/backend
-RUN npm install
+RUN npm ci
 
-FROM node:20-bullseye-slim AS build
-WORKDIR /app/backend
-COPY --from=deps /app/backend/node_modules ./node_modules
-COPY package.json ../package.json
-COPY backend/package.json ./package.json
-COPY backend/tsconfig.json ./tsconfig.json
-COPY backend/prisma ./prisma
-COPY backend/src ./src
-RUN npm run prisma:generate
-RUN npm run build
+COPY prisma ./prisma
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run prisma:generate && npm run build && npm prune --omit=dev
 
-FROM node:20-bullseye-slim AS runtime
-WORKDIR /app/backend
-COPY --from=build /app/backend/dist ./dist
-COPY --from=build /app/backend/node_modules ./node_modules
-RUN apt-get update && apt-get install -y openssl libssl1.1 && rm -rf /var/lib/apt/lists/*
-COPY backend/uploads ./uploads
+FROM node:22-bookworm-slim AS runtime
+WORKDIR /app
+
 ENV NODE_ENV=production
+
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/package.json ./package.json
+RUN mkdir -p uploads && chown node:node uploads
+
+USER node
 EXPOSE 4000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
 CMD ["node", "dist/server.js"]

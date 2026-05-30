@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 .env
+**/.env
+!**/.env.example
+backend/uploads/
+frontend/playwright-report/
+frontend/test-results/
+test-results/
 
 # Editor directories and files
 .vscode/*
