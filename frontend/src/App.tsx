@@ -36,12 +36,10 @@ import JobCardDetail from "./pages/service-center/JobCardDetail";
 import JobCardInvoice from "./pages/service-center/JobCardInvoice";
 import CreateJobCard from "./pages/service-center/CreateJobCard";
 import Customers from "./pages/service-center/Customers";
-import Mechanics from "./pages/service-center/Mechanics";
 import VehicleLookup from "./pages/service-center/VehicleLookup";
 import SCAnalytics from "./pages/service-center/Analytics";
 import SCSettings from "./pages/service-center/Settings";
 import SCExtensions from "./pages/service-center/Extensions";
-import Supplies from "./pages/service-center/Supplies";
 import WheelAlignment from "./pages/service-center/WheelAlignment";
 import NotFound from "./pages/NotFound";
 
@@ -93,12 +91,10 @@ const App = () => (
                   <Route path="jobs/:id" element={<JobCardDetail />} />
                   <Route path="jobs/:id/invoice" element={<JobCardInvoice />} />
                   <Route path="customers" element={<Customers />} />
-                  <Route path="mechanics" element={<Mechanics />} />
                   <Route path="lookup" element={<VehicleLookup />} />
                   <Route path="analytics" element={<SCAnalytics />} />
                   <Route path="settings" element={<SCSettings />} />
                   <Route path="extensions" element={<SCExtensions />} />
-                  <Route path="supplies" element={<Supplies />} />
                   <Route path="wheel-alignment" element={<WheelAlignment />} />
                 </Route>
               </Route>

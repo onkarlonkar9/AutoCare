@@ -46,10 +46,8 @@ const featureNavItems: Array<{ title: string; url: string; icon: LucideIcon; fea
   { title: 'Dashboard', url: '/service-center', icon: LayoutDashboard, featureKey: 'dashboard' },
   { title: 'Job Cards', url: '/service-center/jobs', icon: ClipboardList, featureKey: 'jobs' },
   { title: 'Customers', url: '/service-center/customers', icon: Users, featureKey: 'customers' },
-  { title: 'Mechanics', url: '/service-center/mechanics', icon: Wrench, featureKey: 'mechanics' },
   { title: 'Lookup', url: '/service-center/lookup', icon: Search, featureKey: 'lookup' },
   { title: 'Analytics', url: '/service-center/analytics', icon: BarChart3, featureKey: 'analytics' },
-  { title: 'Supplies', url: '/service-center/supplies', icon: Package, featureKey: 'inventory' },
 ];
 
 const systemNavItems = [
