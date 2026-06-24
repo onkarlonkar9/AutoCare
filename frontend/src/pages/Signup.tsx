@@ -11,7 +11,7 @@ import { getDefaultAppRoute } from '@/lib/authRoutes';
 import { toast } from 'sonner';
 import { API_BASE_URL } from '@/integrations/backend/client';
 
-type SignupRole = 'owner' | 'service_center';
+type SignupRole = 'owner' | 'service_center' | 'admin';
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
@@ -94,7 +94,19 @@ const Signup = () => {
             >
               Workshop
             </button>
+            <button
+              type="button"
+              onClick={() => setRole('admin')}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${role === 'admin' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+            >
+              Admin
+            </button>
           </div>
+          {role === 'admin' && (
+            <p className="text-xs text-primary-foreground mt-2">
+              Admin accounts receive full access to all features and plans without payment.
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">

@@ -45,6 +45,7 @@ import {
 import { toast } from 'sonner';
 
 const WORKSHOP_SETTINGS_KEY = 'sc-workshop-settings-v1';
+const SETTINGS_LAST_SAVED_KEY = 'sc-settings-last-saved-at';
 
 type ShiftSettings = {
   dayShiftStart: string;
@@ -421,6 +422,7 @@ const SCSettings = () => {
 
   const [showPlanPortal, setShowPlanPortal] = useState(false);
   const [settingsAudit, setSettingsAudit] = useState<SettingsAuditEntry[]>([]);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(() => localStorage.getItem(SETTINGS_LAST_SAVED_KEY));
 
   useEffect(() => {
     const saved = localStorage.getItem('sc-shift-settings');
@@ -574,8 +576,15 @@ const SCSettings = () => {
     setWorkshopSettings((prev) => ({ ...prev, [key]: value }));
   };
 
+  const markSettingsSaved = () => {
+    const savedAt = new Date().toISOString();
+    localStorage.setItem(SETTINGS_LAST_SAVED_KEY, savedAt);
+    setLastSavedAt(savedAt);
+  };
+
   const handleSaveShiftSettings = () => {
     localStorage.setItem('sc-shift-settings', JSON.stringify(shiftSettings));
+    markSettingsSaved();
     appendAudit('save', 'staff', 'Updated shift infrastructure and scheduling defaults');
     toast.success('Mechanics shift settings saved');
   };
@@ -586,6 +595,7 @@ const SCSettings = () => {
       return;
     }
     localStorage.setItem(WORKSHOP_SETTINGS_KEY, JSON.stringify(workshopSettings));
+    markSettingsSaved();
     appendAudit('save', 'workshop', 'Saved workshop settings profile and defaults');
     toast.success('Workshop settings saved');
   };
@@ -599,13 +609,19 @@ const SCSettings = () => {
     };
     setWorkshopSettings(resetValues);
     localStorage.setItem(WORKSHOP_SETTINGS_KEY, JSON.stringify(resetValues));
+    markSettingsSaved();
     appendAudit('reset', 'workshop', 'Reset workshop settings to defaults');
     toast.success('Workshop settings reset to defaults');
   };
 
   const handleSaveAll = () => {
-    handleSaveWorkshopSettings();
+    if (!workshopSettings.workshopName.trim()) {
+      toast.error('Workshop name is required');
+      return;
+    }
+    localStorage.setItem(WORKSHOP_SETTINGS_KEY, JSON.stringify(workshopSettings));
     localStorage.setItem('sc-shift-settings', JSON.stringify(shiftSettings));
+    markSettingsSaved();
     appendAudit('save-all', 'settings', 'Saved all workshop settings sections');
     toast.success('All settings saved');
   };
@@ -781,6 +797,21 @@ const SCSettings = () => {
   const storagePercent = Math.min(100, Math.round((subscriptionStatus.storageUsed / subscriptionStatus.storageLimit) * 100));
   const completedSteps = setupSteps.filter((step) => step.done).length;
   const ActiveTabIcon = activeTabMeta.icon;
+  const lastSavedLabel = lastSavedAt
+    ? new Intl.DateTimeFormat('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date(lastSavedAt))
+    : 'Not saved yet';
+  const nextSetupStep = setupSteps.find((step) => !step.done);
+  const criticalStatusLabel = invoiceGenerationBlocked
+    ? `${criticalBusinessMissing.length} blocking issue${criticalBusinessMissing.length > 1 ? 's' : ''}`
+    : criticalBusinessMissing.length > 0
+      ? `${criticalBusinessMissing.length} field${criticalBusinessMissing.length > 1 ? 's' : ''} need review`
+      : 'Ready for invoices';
+  const currentSectionLabel = `${SETTINGS_TABS.findIndex((tab) => tab.key === activeTab) + 1}/${SETTINGS_TABS.length}`;
   const overviewCards = [
     {
       label: 'Setup Completion',
@@ -820,40 +851,78 @@ const SCSettings = () => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative max-w-7xl pb-20"
+      className="relative mx-auto max-w-7xl pb-24"
     >
       <Tabs value={activeTab} className="w-full space-y-6" onValueChange={(value) => setActiveTab(value as SettingsTabKey)}>
-        <section className="mb-6 flex flex-col gap-4 border-b border-border/50 pb-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Workshop settings</p>
-            <h1 className="text-3xl font-display font-semibold tracking-tight">Settings</h1>
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Keep your workshop profile, billing rules, staff defaults, and system preferences organized in one clean workspace.
-            </p>
+        <section className="relative mb-6 overflow-hidden rounded-2xl border border-border/50 bg-card/80 p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="rounded-md border-border/60 bg-background/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Workshop settings
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${
+                    invoiceGenerationBlocked
+                      ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                      : 'border-success/30 bg-success/10 text-success'
+                  }`}
+                >
+                  {criticalStatusLabel}
+                </Badge>
+              </div>
+              <div>
+                <h1 className="text-3xl font-display font-semibold tracking-tight sm:text-4xl">Settings</h1>
+                <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                  Configure the business identity, billing controls, workflow rules, and operational guardrails that power your workshop.
+                </p>
+              </div>
+              <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+                <div className="rounded-lg border border-border/50 bg-background/70 px-3 py-2">
+                  <span className="font-medium text-foreground">Last saved:</span> {lastSavedLabel}
+                </div>
+                <div className="rounded-lg border border-border/50 bg-background/70 px-3 py-2">
+                  <span className="font-medium text-foreground">Next step:</span> {nextSetupStep?.label || 'All essentials ready'}
+                </div>
+                <div className="rounded-lg border border-border/50 bg-background/70 px-3 py-2">
+                  <span className="font-medium text-foreground">Section:</span> {currentSectionLabel} {activeTabMeta.label}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetWorkshopSettings}
+                className="h-10 rounded-lg border-border/60 bg-background px-4"
+              >
+                <RotateCcw className="mr-2 h-3.5 w-3.5" /> Reset
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveAll}
+                className="h-10 rounded-lg bg-foreground px-4 text-background hover:bg-foreground/90"
+              >
+                <Save className="mr-2 h-3.5 w-3.5" /> Save changes
+              </Button>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleResetWorkshopSettings}
-              className="h-10 rounded-xl border-border/50 bg-background px-4"
-            >
-              <RotateCcw className="mr-2 h-3.5 w-3.5" /> Reset
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSaveAll}
-              className="h-10 rounded-xl bg-foreground px-4 text-background hover:bg-foreground/90"
-            >
-              <Save className="mr-2 h-3.5 w-3.5" /> Save changes
-            </Button>
-          </div>
+          {invoiceGenerationBlocked && (
+            <div className="mt-5 flex items-start gap-3 rounded-lg border border-destructive/25 bg-destructive/10 p-4 text-sm text-destructive">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>
+                Invoice generation is currently blocked. Complete: <span className="font-semibold">{criticalBusinessMissing.join(', ')}</span>.
+              </p>
+            </div>
+          )}
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[280px,minmax(0,1fr)]">
-          <aside className="space-y-4 xl:sticky xl:top-20 self-start">
-            <div className="rounded-3xl border border-border/50 bg-card/70 p-5">
+        <div className="grid gap-6 xl:grid-cols-[300px,minmax(0,1fr)]">
+          <aside className="self-start space-y-4 xl:sticky xl:top-20">
+            <div className="rounded-2xl border border-border/50 bg-card/80 p-5 shadow-sm">
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <p className="text-sm font-semibold">{workshopSettings.workshopName || profile?.name || 'Workshop profile'}</p>
@@ -862,7 +931,7 @@ const SCSettings = () => {
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-border/50 bg-muted/20 p-4">
+                <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
                   <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     <span>Setup progress</span>
                     <span>{completionPercent}%</span>
@@ -874,19 +943,19 @@ const SCSettings = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-border/40 bg-background/80 p-3">
+                  <div className="rounded-xl border border-border/40 bg-background/80 p-3">
                     <p className="text-[11px] font-medium text-muted-foreground">Plan</p>
                     <p className="mt-1 text-sm font-semibold">{subscriptionStatus.plan}</p>
                   </div>
-                  <div className="rounded-2xl border border-border/40 bg-background/80 p-3">
+                  <div className="rounded-xl border border-border/40 bg-background/80 p-3">
                     <p className="text-[11px] font-medium text-muted-foreground">Team</p>
                     <p className="mt-1 text-sm font-semibold">{mechanics.length} / {subscriptionStatus.teamLimit}</p>
                   </div>
-                  <div className="rounded-2xl border border-border/40 bg-background/80 p-3">
+                  <div className="rounded-xl border border-border/40 bg-background/80 p-3">
                     <p className="text-[11px] font-medium text-muted-foreground">Open jobs</p>
                     <p className="mt-1 text-sm font-semibold">{openJobsCount}</p>
                   </div>
-                  <div className="rounded-2xl border border-border/40 bg-background/80 p-3">
+                  <div className="rounded-xl border border-border/40 bg-background/80 p-3">
                     <p className="text-[11px] font-medium text-muted-foreground">Storage</p>
                     <p className="mt-1 text-sm font-semibold">{storagePercent}% used</p>
                   </div>
@@ -894,7 +963,7 @@ const SCSettings = () => {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-border/50 bg-card/70 p-3">
+            <div className="rounded-2xl border border-border/50 bg-card/80 p-3 shadow-sm">
               <div className="px-2 pb-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Sections</p>
                 <p className="mt-1 text-xs text-muted-foreground">Choose an area to review or update.</p>
@@ -904,10 +973,10 @@ const SCSettings = () => {
                   <TabsTrigger
                     key={tab.key}
                     value={tab.key}
-                    className="h-auto w-full items-start justify-start rounded-2xl border border-transparent px-3 py-3 text-left data-[state=active]:border-border/60 data-[state=active]:bg-muted/40 data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                    className="group h-auto w-full items-start justify-start rounded-xl border border-transparent px-3 py-3 text-left transition-colors hover:bg-muted/25 data-[state=active]:border-border/60 data-[state=active]:bg-muted/45 data-[state=active]:text-foreground data-[state=active]:shadow-none"
                   >
                     <div className="flex w-full items-start gap-3">
-                      <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl border border-border/40 bg-background text-primary">
+                      <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-lg border border-border/40 bg-background text-primary transition-colors group-data-[state=active]:border-primary/20 group-data-[state=active]:bg-primary/10">
                         <tab.icon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
@@ -922,10 +991,10 @@ const SCSettings = () => {
           </aside>
 
           <div className="space-y-6">
-            <section className="rounded-3xl border border-border/50 bg-card/70 p-5 sm:p-6">
+            <section className="rounded-2xl border border-border/50 bg-card/80 p-5 shadow-sm sm:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border/40 bg-background text-primary">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-border/40 bg-background text-primary">
                     <ActiveTabIcon className="h-5 w-5" />
                   </div>
                   <div className="space-y-1">
@@ -937,7 +1006,7 @@ const SCSettings = () => {
 
                 <Badge
                   variant="outline"
-                  className="w-fit rounded-full border-border/50 bg-background/80 px-3 py-1 text-[11px] font-medium text-foreground"
+                  className="w-fit rounded-md border-border/50 bg-background/80 px-3 py-1 text-[11px] font-medium text-foreground"
                 >
                   {subscriptionStatus.isActive ? 'Plan active' : 'Needs review'}
                 </Badge>
@@ -950,10 +1019,10 @@ const SCSettings = () => {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.22, delay: index * 0.03 }}
-                    className="rounded-2xl border border-border/40 bg-background/80 p-4"
+                    className="rounded-xl border border-border/40 bg-background/80 p-4"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/40 bg-muted/20 text-primary">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/40 bg-muted/20 text-primary">
                         <card.icon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
@@ -978,32 +1047,28 @@ const SCSettings = () => {
             <TabsContent value="business" className="space-y-6 mt-0 focus-visible:outline-none">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-8 space-y-6">
-                  <div className="glass-card rounded-3xl p-8 border border-border/40 space-y-8 relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
-                      <Building2 className="h-40 w-40" />
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <div className="relative space-y-7 overflow-hidden rounded-2xl border border-border/50 bg-card/80 p-5 shadow-sm sm:p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10">
                         <MapPin className="h-6 w-6 text-primary" />
                       </div>
-                      <div>
-                        <h2 className="text-xl font-bold">Business Profile</h2>
-                        <p className="text-sm text-muted-foreground">General information about your workshop</p>
+                      <div className="min-w-0">
+                        <h2 className="text-xl font-semibold">Business Profile</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">Details used on invoices, job cards, customer messages, and compliance checks.</p>
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border border-border/40 bg-muted/20 p-5 space-y-4">
-                      <div className="flex items-center justify-between">
+                    <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <p className="text-sm font-semibold">Business Profile Completeness</p>
                           <p className="text-xs text-muted-foreground">Critical fields are used for invoice and compliance workflows.</p>
                         </div>
-                        <Badge variant="outline" className="font-semibold">{businessCompletionPercent}%</Badge>
+                        <Badge variant="outline" className="w-fit rounded-md font-semibold">{businessCompletionPercent}% complete</Badge>
                       </div>
                       <Progress value={businessCompletionPercent} className="h-2" />
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-background ring-1 ring-border/20">
-                        <div>
+                      <div className="flex flex-col gap-3 rounded-lg border border-border/50 bg-background/90 p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
                           <p className="text-sm font-semibold">Block Invoices If Critical Fields Missing</p>
                           <p className="text-xs text-muted-foreground">
                             {invoiceGenerationBlocked
@@ -1023,21 +1088,21 @@ const SCSettings = () => {
 
                     <div className="grid sm:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold ml-1">Workshop Name</label>
+                        <label className="ml-1 flex items-center gap-2 text-sm font-semibold">Workshop Name <span className="text-[10px] font-medium text-destructive">Required</span></label>
                         <Input 
                           value={workshopSettings.workshopName} 
                           onChange={(e) => updateWorkshopField('workshopName', e.target.value)} 
                           placeholder="Your Premium Workshop" 
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold ml-1">Support Phone</label>
+                        <label className="ml-1 flex items-center gap-2 text-sm font-semibold">Support Phone <span className="text-[10px] font-medium text-destructive">Required</span></label>
                         <Input 
                           value={workshopSettings.workshopPhone} 
                           onChange={(e) => updateWorkshopField('workshopPhone', e.target.value)} 
                           placeholder="+91 00000 00000"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                     </div>
@@ -1049,16 +1114,16 @@ const SCSettings = () => {
                           value={workshopSettings.workshopEmail} 
                           onChange={(e) => updateWorkshopField('workshopEmail', e.target.value)} 
                           placeholder="contact@workshop.com"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold ml-1">Complete Address</label>
+                        <label className="ml-1 flex items-center gap-2 text-sm font-semibold">Complete Address <span className="text-[10px] font-medium text-destructive">Required</span></label>
                         <Input 
                           value={workshopSettings.workshopAddress} 
                           onChange={(e) => updateWorkshopField('workshopAddress', e.target.value)} 
                           placeholder="Street, Locality, Area"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                     </div>
@@ -1070,7 +1135,7 @@ const SCSettings = () => {
                           value={workshopSettings.city} 
                           onChange={(e) => updateWorkshopField('city', e.target.value)} 
                           placeholder="Mumbai"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1079,7 +1144,7 @@ const SCSettings = () => {
                           value={workshopSettings.state} 
                           onChange={(e) => updateWorkshopField('state', e.target.value)} 
                           placeholder="Maharashtra"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1088,19 +1153,19 @@ const SCSettings = () => {
                           value={workshopSettings.pincode} 
                           onChange={(e) => updateWorkshopField('pincode', e.target.value)} 
                           placeholder="400001"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                     </div>
 
                     <div className="grid sm:grid-cols-3 gap-6 pt-4 border-t border-border/40">
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold ml-1">GST Number</label>
+                        <label className="ml-1 flex items-center gap-2 text-sm font-semibold">GST Number <span className="text-[10px] font-medium text-destructive">Required</span></label>
                         <Input 
                           value={workshopSettings.gstNumber} 
                           onChange={(e) => updateWorkshopField('gstNumber', e.target.value.toUpperCase())} 
                           placeholder="27AAAAA0000A1Z5"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1109,7 +1174,7 @@ const SCSettings = () => {
                           value={workshopSettings.panNumber} 
                           onChange={(e) => updateWorkshopField('panNumber', e.target.value.toUpperCase())} 
                           placeholder="ABCDE1234F"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1118,7 +1183,7 @@ const SCSettings = () => {
                           value={workshopSettings.serviceLicenseNo} 
                           onChange={(e) => updateWorkshopField('serviceLicenseNo', e.target.value)} 
                           placeholder="LIC-000-XX"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                     </div>
@@ -1126,37 +1191,43 @@ const SCSettings = () => {
                 </div>
 
                 <div className="lg:col-span-4 space-y-6">
-                  <div className="glass-card rounded-3xl p-6 border border-border/40 space-y-6">
+                  <div className="rounded-2xl border border-border/50 bg-card/80 p-5 shadow-sm space-y-5">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
                         <Sparkles className="h-5 w-5 text-indigo-500" />
                       </div>
-                      <h3 className="font-bold">Appearance</h3>
+                      <div>
+                        <h3 className="font-semibold">Appearance</h3>
+                        <p className="text-xs text-muted-foreground">Workspace display preference</p>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 ring-1 ring-border/20">
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 ring-1 ring-border/20">
                       <div>
                         <p className="text-sm font-medium">Visual Theme</p>
-                        <p className="text-xs text-muted-foreground capitalized">{theme} Mode Active</p>
+                        <p className="text-xs capitalize text-muted-foreground">{theme} mode active</p>
                       </div>
                       <ThemeToggle />
                     </div>
                   </div>
 
-                  <div className="glass-card rounded-3xl p-6 border border-border/40 bg-primary/5 space-y-4">
+                  <div className="rounded-2xl border border-primary/15 bg-primary/5 p-5 shadow-sm space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                         <Info className="h-5 w-5 text-primary" />
                       </div>
-                      <h3 className="font-bold text-primary">Status</h3>
+                      <div>
+                        <h3 className="font-semibold text-primary">Workspace Status</h3>
+                        <p className="text-xs text-muted-foreground">Profile and access overview</p>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Account Role</span>
-                        <Badge variant="outline" className="bg-background/50 border-primary/20 text-primary capitalize">{role?.replace('_', ' ')}</Badge>
+                        <Badge variant="outline" className="bg-background/50 border-primary/20 text-primary capitalize">{role?.replace('_', ' ') || 'service center'}</Badge>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Last Updated</span>
-                        <span className="font-medium">Just now</span>
+                        <span className="text-muted-foreground">Last Saved</span>
+                        <span className="font-medium">{lastSavedLabel}</span>
                       </div>
                     </div>
                   </div>
@@ -1167,25 +1238,25 @@ const SCSettings = () => {
             <TabsContent value="billing" className="space-y-6 mt-0 focus-visible:outline-none">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                  <div className="glass-card rounded-3xl p-8 border border-border/40 space-y-8">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-orange-500/10 flex items-center justify-center">
+                  <div className="rounded-2xl border border-border/50 bg-card/80 p-5 shadow-sm space-y-7 sm:p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-orange-500/15 bg-orange-500/10">
                         <ReceiptIndianRupee className="h-6 w-6 text-orange-500" />
                       </div>
-                      <div>
-                        <h2 className="text-xl font-bold">Billing Architecture</h2>
-                        <p className="text-sm text-muted-foreground">Configure invoice numbering and tax structures</p>
+                      <div className="min-w-0">
+                        <h2 className="text-xl font-semibold">Billing Architecture</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">Set invoice numbering, gate passes, tax defaults, and payment behavior.</p>
                       </div>
                     </div>
 
                     <div className="grid sm:grid-cols-3 gap-6">
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold ml-1">Invoice Prefix</label>
+                        <label className="ml-1 flex items-center gap-2 text-sm font-semibold">Invoice Prefix <span className="text-[10px] font-medium text-destructive">Required</span></label>
                         <Input 
                           value={workshopSettings.invoicePrefix} 
                           onChange={(e) => updateWorkshopField('invoicePrefix', e.target.value.toUpperCase())} 
                           placeholder="INV"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1194,7 +1265,7 @@ const SCSettings = () => {
                           type="number" 
                           value={workshopSettings.nextInvoiceNumber} 
                           onChange={(e) => updateWorkshopField('nextInvoiceNumber', Math.max(1, Number(e.target.value) || 1))}
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1203,7 +1274,7 @@ const SCSettings = () => {
                           value={workshopSettings.defaultCurrency} 
                           onChange={(e) => updateWorkshopField('defaultCurrency', e.target.value.toUpperCase())} 
                           placeholder="INR"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                     </div>
@@ -1215,7 +1286,7 @@ const SCSettings = () => {
                           value={workshopSettings.gatePassPrefix} 
                           onChange={(e) => updateWorkshopField('gatePassPrefix', e.target.value.toUpperCase())} 
                           placeholder="GP"
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1224,7 +1295,7 @@ const SCSettings = () => {
                           type="number" 
                           value={workshopSettings.nextGatePassNumber} 
                           onChange={(e) => updateWorkshopField('nextGatePassNumber', Math.max(1, Number(e.target.value) || 1))}
-                          className="h-12 rounded-xl bg-muted/30 border-none ring-1 ring-border/40 focus-visible:ring-primary/50 transition-all font-medium"
+                          className="h-11 rounded-lg border-border/60 bg-background font-medium transition-all focus-visible:ring-primary/50"
                         />
                       </div>
                     </div>
@@ -1232,12 +1303,15 @@ const SCSettings = () => {
                 </div>
 
                 <div className="space-y-6">
-                  <div className="glass-card rounded-3xl p-6 border border-border/40 space-y-6 bg-secondary/20">
+                  <div className="rounded-2xl border border-border/50 bg-card/80 p-5 shadow-sm space-y-5">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                         <CreditCard className="h-5 w-5 text-primary" />
                       </div>
-                      <h3 className="font-bold">Tax & Labor</h3>
+                      <div>
+                        <h3 className="font-semibold">Tax & Labor</h3>
+                        <p className="text-xs text-muted-foreground">Default pricing behavior</p>
+                      </div>
                     </div>
                     
                     <div className="space-y-4">
@@ -2433,6 +2507,34 @@ const SCSettings = () => {
           </div>
         </div>
       </Tabs>
+
+      <div className="sticky bottom-4 z-20 mt-6 rounded-xl border border-border/60 bg-card/95 p-3 shadow-lg backdrop-blur">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Review and save workshop settings</p>
+            <p className="text-xs text-muted-foreground">
+              Last saved: {lastSavedLabel}. {invoiceGenerationBlocked ? 'Resolve blocking fields before invoicing.' : 'Core settings are ready for daily operations.'}
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetWorkshopSettings}
+              className="h-9 rounded-lg border-border/60 bg-background px-3"
+            >
+              <RotateCcw className="mr-2 h-3.5 w-3.5" /> Reset
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSaveAll}
+              className="h-9 rounded-lg bg-foreground px-3 text-background hover:bg-foreground/90"
+            >
+              <Save className="mr-2 h-3.5 w-3.5" /> Save all
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <AnimatePresence>
         {showPlanPortal && (
